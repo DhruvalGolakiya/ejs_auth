@@ -7,32 +7,41 @@ const session = require("express-session");
 var crypto = require("crypto");
 const { name } = require("ejs");
 var bcrypt = require("bcrypt");
+const UserData =  require('./models/data_model')
+const mongoose = require('mongoose')
+const MongoStore = require('connect-mongo')
 var LocalStrategy = require("passport-local").Strategy;
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.urlencoded({ extended: false }));
 
-const users = [];
-// mongoose.connect(
-//    "mongodb+srv://Dhruval:DhruvalMDDK257@cluster0.eus4ytk.mongodb.net/test"
-//  );
-// const db = mongoose.connection;
-// db.on("error", console.error.bind(console, "connection error: "));
-// db.once("open", function () {
-//   console.log("Connected successfully");
-// });
+
+mongoose.connect(
+   "mongodb+srv://Dhruval:DhruvalMDDK257@cluster0.eus4ytk.mongodb.net/test"
+ );
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "connection error: "));
+db.once("open", function () {
+  console.log("Connected successfully");
+});
+
+
 
 const initializePassport = require("./passwordAuth");
 initializePassport(
   passport,
-  (name) => users.find((user) => user.name === name),
-  (id) => users.find((user) => user.id === id)
+  (name) => UserData.findOne((user)=> user.name === name)
+  // (id) => UserData.find((user) => user.id === id)
 );
 app.use(
   session({
     secret: "some secret",
     resave: false,
     saveUninitialized: true,
+    store: MongoStore.create({
+      mongoUrl:
+        "mongodb+srv://Dhruval:DhruvalMDDK257@cluster0.eus4ytk.mongodb.net/test",
+    }),
   })
 );
 app.use(passport.session());
@@ -65,13 +74,14 @@ app.post("/register",checkNotAuthenticated, async (req, res, next) => {
   console.log(req.body.password);
   const hashedpassword = await bcrypt.hash(req.body.password, 10);
 
-  users.push({
-    id: Date.now().toString(),
+  const newUser = new UserData({
     name: req.body.name,
     password: hashedpassword,
   });
-  console.log(users);
-  console.log(users.find((user) => user.name === "dhruval"));
+
+  newUser.save();
+  console.log(newUser);
+  // console.log(users.find((user) => user.name === "dhruval"));
   res.redirect("/login/admin");
 });
 
@@ -93,7 +103,7 @@ app.get("/login/admin",checkNotAuthenticated, (req, res) => {
 
 app.get("/", checkAuthenticated,(req, res) => {
   res.render("HomePage", {
-    name: req.user.name,
+    name: "Hi",
   });
 });
 app.get("/register", checkNotAuthenticated,(req, res) => {
